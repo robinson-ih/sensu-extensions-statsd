@@ -218,6 +218,56 @@ describe 'Sensu::Extension::StatsD' do
     end
   end
 
+  it 'allow zero values in gauges' do
+    @extension.settings = {
+      client: {
+        name: 'foo'
+      },
+      statsd: {
+        flush_interval: 1,
+        delete_gauges: true,
+        delete_counters: true,
+        delete_timers: true,
+        truncate_output: false
+      }
+    }
+    async_wrapper do
+      timer(1) do
+        EM.connect('127.0.0.1', 8125, nil) do |socket|
+          data = 'tcp:0|g'
+          socket.send_data(data)
+          socket.close_connection_after_writing
+        end
+        EM.open_datagram_socket('127.0.0.1', 0, nil) do |socket|
+          data = 'udp:0|g'
+          socket.send_datagram(data, '127.0.0.1', 8125)
+          socket.close_connection_after_writing
+        end
+        timer(3) do
+          @extension.safe_run do |output, status|
+            expect(output).to match(/foo\.statsd\.gauges\.tcp 0\.0/)
+            expect(output).to match(/foo\.statsd\.gauges\.udp 0\.0/)
+            expect(output.split("\n").size).to eq(2)
+            expect(status).to eq(0)
+          end
+          EM.open_datagram_socket('127.0.0.1', 0, nil) do |socket|
+            data = 'sample:10|g'
+            socket.send_datagram(data, '127.0.0.1', 8125)
+            socket.close_connection_after_writing
+          end
+        end
+        timer(4) do
+          @extension.safe_run do |output, status|
+            expect(output).to match(/foo\.statsd\.gauges\.sample 10\.0/)
+            expect(output.split("\n").size).to eq(1)
+            expect(status).to eq(0)
+            async_done
+          end
+        end
+      end
+    end
+  end
+
   it 'can include custom check attributes' do
     @extension.settings = {
       client: {

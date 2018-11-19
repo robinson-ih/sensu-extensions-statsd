@@ -62,6 +62,7 @@ module Sensu
         @gauges = Hash.new { |h, k| h[k] = 0 }
         @counters = Hash.new { |h, k| h[k] = 0 }
         @timers = Hash.new { |h, k| h[k] = [] }
+        @gauges_status = Hash.new { |h, k| h[k] = 0 }
         @metrics = []
         setup_flush_timers
         setup_parser
@@ -112,11 +113,12 @@ module Sensu
 
       def flush!
         @gauges.each do |name, value|
-          unless value == 0 && options[:delete_gauges]
+          unless value == 0 && options[:delete_gauges] && @gauges_status[name] == 0
             add_metric('gauges', name, value)
           end
         end
         clean(@gauges, options[:delete_gauges], options[:reset_gauges])
+        clean(@gauges_status, true, true)
         @counters.each do |name, value|
           unless value == 0 && options[:delete_counters]
             add_metric('counters', name, value.to_i)
@@ -173,6 +175,7 @@ module Sensu
               else
                 @gauges[name] = value
               end
+              @gauges_status[name] = 1
             when /^c/, 'm'
               @counters[name] += value * (1 / sample)
             when 'ms', 'h', 't'

@@ -115,10 +115,11 @@ module Sensu
         @gauges.each do |name, value|
           unless value == 0 && options[:delete_gauges] && @gauges_status[name] == 0
             add_metric('gauges', name, value)
+            @gauges_status[name] = 0
           end
         end
         clean(@gauges, options[:delete_gauges], options[:reset_gauges])
-        clean(@gauges_status, true, true)
+        clean(@gauges_status, true, false)
         @counters.each do |name, value|
           unless value == 0 && options[:delete_counters]
             add_metric('counters', name, value.to_i)

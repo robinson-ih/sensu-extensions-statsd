@@ -51,7 +51,8 @@ module Sensu
           standalone: true,
           output_format: 'graphite_plaintext',
           handler: options[:handler],
-          truncate_output: options[:truncate_output]
+          truncate_output: options[:truncate_output],
+          tags: tags
         }
         options[:additional_attributes] ? check_attributes.merge!(options[:additional_attributes]) : check_attributes
       end
@@ -159,14 +160,33 @@ module Sensu
         end
       end
 
+      def tags(merge_tags = {})
+      @tags ||= {}
+      @tags.merge! merge_tags
+      end
       # TODO: come back and refactor me
       def setup_parser # rubocop:disable Metrics/MethodLength
         parser = proc do |data|
           begin
-            nv, type, raw_sample = data.strip.split('|')
+            nv, type, *extras = data.strip.split('|')
             name, raw_value = nv.split(':')
             value = Float(raw_value)
-            sample = Float(raw_sample ? raw_sample.split('@').last : 1)
+            sample = Float(1)
+            statsd_tags = {}
+            extras.each do |param|
+              case param
+              when /^@/
+                sample = Float(param.split('@').last)
+              when /^#/
+                statsd_tags = param.split('#').last.split(',')
+                statsd_tags = statsd_tags.reduce({}) { |all_tags, datagram_tag|
+                                k,v = datagram_tag.split(':')
+                                all_tags[k] = v
+                                all_tags
+                              }
+                tags statsd_tags
+              end
+            end
             case type
             when 'g'
               if raw_value.start_with?('+')

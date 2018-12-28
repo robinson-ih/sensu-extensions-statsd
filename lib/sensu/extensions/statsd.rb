@@ -60,9 +60,9 @@ module Sensu
       def post_init
         @flush_timers = []
         @data = EM::Queue.new
-        @gauges = Hash.new { |h, k| h[k] = 0 }
-        @counters = Hash.new { |h, k| h[k] = 0 }
-        @timers = Hash.new { |h, k| h[k] = [] }
+        @gauges = Hash.new { |h, k| h[k] = { value: 0, tags: {} } }
+        @counters = Hash.new { |h, k| h[k] = { value: 0, tags: {} } }
+        @timers = Hash.new { |h, k| h[k] = { value: [], tags: {} } }
         @gauges_status = Hash.new { |h, k| h[k] = 0 }
         @metrics = []
         setup_flush_timers
@@ -84,18 +84,19 @@ module Sensu
 
       def clean(hash, delete = false, reset = false)
         if delete
-          hash.delete_if do |_key, value|
-            value == 0 || value == []
+          hash.delete_if do |_key, metric|
+            metric['value'] == 0 || metric['value'] == []
           end
         end
         if reset
-          hash.each do |key, value|
-            hash[key] = (value.is_a?(Array) ? [] : 0)
+          hash.each do |key, metric|
+            hash[key]['value'] = (value.is_a?(Array) ? [] : 0)
           end
         end
       end
 
       def add_metric(*args) # rubocop:disable Metrics/MethodLength
+        tags = args.pop
         value = args.pop
         path = []
         path << @settings[:client][:name] if options[:add_client_prefix]
@@ -108,26 +109,29 @@ module Sensu
         else
           @logger.debug('adding statsd metric', path: path,
                                                 value: value)
-          @metrics << [path, value, Time.now.to_i].join(' ')
+          graphite_format = [path, value, Time.now.to_i]
+          graphite_format << tags.collect {|k,v| k.to_s + ':' + v.to_s}.join(',') if tags
+          @metrics << graphite_metric.join(' ')
         end
       end
 
       def flush!
-        @gauges.each do |name, value|
-          unless value == 0 && options[:delete_gauges] && @gauges_status[name] == 0
-            add_metric('gauges', name, value)
+        @gauges.each do |name, metric|
+          unless metric['value'] == 0 && options[:delete_gauges] && @gauges_status[name] == 0
+            add_metric('gauges', name, value, metric['tags'])
             @gauges_status[name] = 0
           end
         end
         clean(@gauges, options[:delete_gauges], options[:reset_gauges])
         clean(@gauges_status, true, false)
-        @counters.each do |name, value|
-          unless value == 0 && options[:delete_counters]
-            add_metric('counters', name, value.to_i)
+        @counters.each do |name, metric|
+          unless metric['value'] == 0 && options[:delete_counters]
+            add_metric('counters', name, value.to_i, metric['tags'])
           end
         end
         clean(@counters, options[:delete_counters], options[:reset_counters])
-        @timers.each do |name, values|
+        @timers.each do |name, metric|
+          values = metric['value']
           next if values.empty? && options[:delete_timers]
           values.sort!
           length = values.length
@@ -145,10 +149,10 @@ module Sensu
             valid_values.each { |v| sum += v }
             mean = sum / valid_values.length
           end
-          add_metric('timers', name, 'lower', min)
-          add_metric('timers', name, 'mean', mean)
-          add_metric('timers', name, 'upper', max)
-          add_metric('timers', name, "upper_#{percentile}", max_at_threshold)
+          add_metric('timers', name, 'lower', min, metric['tags'])
+          add_metric('timers', name, 'mean', mean, metric['tags'])
+          add_metric('timers', name, 'upper', max, metric['tags'])
+          add_metric('timers', name, "upper_#{percentile}", max_at_threshold, metric['tags'])
         end
         clean(@timers, options[:delete_timers], options[:reset_timers])
         @logger.debug('flushed statsd metrics')
@@ -190,17 +194,17 @@ module Sensu
             case type
             when 'g'
               if raw_value.start_with?('+')
-                @gauges[name] += value
+                @gauges[name]['value'] += value
               elsif raw_value.start_with?('-')
-                @gauges[name] -= value.abs
+                @gauges[name]['value'] -= value.abs
               else
-                @gauges[name] = value
+                @gauges[name]['value'] = value
               end
               @gauges_status[name] = 1
             when /^c/, 'm'
-              @counters[name] += value * (1 / sample)
+              @counters[name]['value'] += value * (1 / sample)
             when 'ms', 'h', 't'
-              @timers[name] << value * (1 / sample)
+              @timers[name]['values'] << value * (1 / sample)
             end
           rescue => error
             @logger.error('statsd parser error', error: error.to_s)

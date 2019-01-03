@@ -156,4 +156,19 @@ describe 'Sensu::Extension::StatsD' do
     end
   end
 
+  it 'can support tags with other params' do
+    async_wrapper do
+      timer(1) do
+        StatsD.increment('test1.count', 10, sample_rate: 0.9, tags: { t1: 1, t2: 2 })
+        timer(2) do
+          @extension.safe_run do |output, status|
+            expect(output).to match(/foo\.statsd\.counters\.test1\.count 11 \d+ t1:1,t2:2/)
+            expect(status).to eq(0)
+            async_done
+          end
+        end
+      end
+    end
+  end
+
 end

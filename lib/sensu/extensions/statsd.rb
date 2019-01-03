@@ -94,7 +94,7 @@ module Sensu
           @logger.debug('adding statsd metric', path: path,
                                                 value: value)
           graphite_metric = [path, value, Time.now.to_i]
-          graphite_metric << tags.collect {|k,v| k.to_s + ':' + v.to_s}.join(',') if tags
+          graphite_metric << tags.collect {|k,v| k.to_s + ':' + v.to_s}.join(',') unless tags.nil? || tags.empty?
           @metrics << graphite_metric.join(' ')
         end
       end

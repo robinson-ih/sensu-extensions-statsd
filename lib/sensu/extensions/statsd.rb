@@ -178,7 +178,6 @@ module Sensu
             when 'g'
               new_gauge = { name: name, value: 0, tags: {} }
               matched_gauge = create_or_fetch_matching_tags(@gauges_list, name, statsd_tags, new_gauge)
-              value = value * (1 / sample)
               matched_gauge[:value] = value
             when /^c/, 'm'
               new_counter = { name: name, value: 0, tags: {} }

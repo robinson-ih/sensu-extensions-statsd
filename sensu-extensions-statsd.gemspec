@@ -20,6 +20,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rubocop', '~> 0.51.0'
   spec.add_development_dependency 'sensu-logger'
   spec.add_development_dependency 'sensu-settings'
+  spec.add_development_dependency 'statsd-instrument', '~> 2.1'
 
   spec.required_ruby_version = '>= 2.1.0'
 end

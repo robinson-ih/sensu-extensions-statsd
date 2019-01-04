@@ -77,12 +77,12 @@ describe 'Statsd extension with datadog protocol' do
         StatsD.measure('test1.time', 30, tags: { t5: 10, t6: 'value3' } )
         timer(2) do
           @extension.safe_run do |output, status|
-            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 20\.0 \d+ t3:10,t4:value2/)
-            expect(output).to match(/foo\.statsd\.counters\.test1\.count 10 \d+ t1:10,t2:value1/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 30\.0 \d+ t5:10,t6:value3/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 30\.0 \d+ t5:10,t6:value3/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 30\.0 \d+ t5:10,t6:value3/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 30\.0 \d+ t5:10,t6:value3/)
+            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 20\.0 \d+ "t3:10,t4:value2"/)
+            expect(output).to match(/foo\.statsd\.counters\.test1\.count 10 \d+ "t1:10,t2:value1"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 30\.0 \d+ "t5:10,t6:value3"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 30\.0 \d+ "t5:10,t6:value3"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 30\.0 \d+ "t5:10,t6:value3"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 30\.0 \d+ "t5:10,t6:value3"/)
             expect(status).to eq(0)
             async_done
           end
@@ -102,14 +102,14 @@ describe 'Statsd extension with datadog protocol' do
         StatsD.measure('test1.time', 40, tags: { t5: 10, t6: 'value3' } )
         timer(2) do
           @extension.safe_run do |output, status|
-            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 30\.0 \d+ t3:10,t4:value2/)
-            expect(output).to match(/foo\.statsd\.counters\.test1\.count 20 \d+ t1:10,t2:value1/)
-            expect(output).to_not match(/foo\.statsd\.gauges\.test1\.value 20\.0 \d+ t3:10,t4:value2/)
-            expect(output).to_not match(/foo\.statsd\.counters\.test1\.count 10 \d+ t1:10,t2:value1/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 30\.0 \d+ t5:10,t6:value3/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 35\.0 \d+ t5:10,t6:value3/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 40\.0 \d+ t5:10,t6:value3/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 40\.0 \d+ t5:10,t6:value3/)
+            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 30\.0 \d+ "t3:10,t4:value2"/)
+            expect(output).to match(/foo\.statsd\.counters\.test1\.count 20 \d+ "t1:10,t2:value1"/)
+            expect(output).to_not match(/foo\.statsd\.gauges\.test1\.value 20\.0 \d+ "t3:10,t4:value2"/)
+            expect(output).to_not match(/foo\.statsd\.counters\.test1\.count 10 \d+ "t1:10,t2:value1"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 30\.0 \d+ "t5:10,t6:value3"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 35\.0 \d+ "t5:10,t6:value3"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 40\.0 \d+ "t5:10,t6:value3"/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 40\.0 \d+ "t5:10,t6:value3"/)
             expect(output.split("\n").size).to eq(6)
             expect(status).to eq(0)
             async_done
@@ -133,20 +133,20 @@ describe 'Statsd extension with datadog protocol' do
         StatsD.measure('test1.time', 140, tags: { t5: 10, t6: 'value3', extratag: 1 } )
         timer(2) do
           @extension.safe_run do |output, status|
-            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 30\.0 \d+ t3:10,t4:value2\n/)
-            expect(output).to match(/foo\.statsd\.counters\.test1\.count 20 \d+ t1:10,t2:value1\n/)
-            expect(output).to_not match(/foo\.statsd\.gauges\.test1\.value 20\.0 \d+ t3:10,t4:value2\n/)
-            expect(output).to_not match(/foo\.statsd\.counters\.test1\.count 10 \d+ t1:10,t2:value1\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 30\.0 \d+ t5:10,t6:value3\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 35\.0 \d+ t5:10,t6:value3\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 40\.0 \d+ t5:10,t6:value3\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 40\.0 \d+ t5:10,t6:value3\n/)
-            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 130\.0 \d+ t3:10,t4:value2,extratag:1\n/)
-            expect(output).to match(/foo\.statsd\.counters\.test1\.count 110 \d+ t1:10,t2:value1,extratag:1\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 140\.0 \d+ t5:10,t6:value3,extratag:1\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 140\.0 \d+ t5:10,t6:value3,extratag:1\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 140\.0 \d+ t5:10,t6:value3,extratag:1\n/)
-            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 140\.0 \d+ t5:10,t6:value3,extratag:1\n/)
+            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 30\.0 \d+ "t3:10,t4:value2"\n/)
+            expect(output).to match(/foo\.statsd\.counters\.test1\.count 20 \d+ "t1:10,t2:value1"\n/)
+            expect(output).to_not match(/foo\.statsd\.gauges\.test1\.value 20\.0 \d+ "t3:10,t4:value2"\n/)
+            expect(output).to_not match(/foo\.statsd\.counters\.test1\.count 10 \d+ "t1:10,t2:value1"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 30\.0 \d+ "t5:10,t6:value3"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 35\.0 \d+ "t5:10,t6:value3"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 40\.0 \d+ "t5:10,t6:value3"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 40\.0 \d+ "t5:10,t6:value3"\n/)
+            expect(output).to match(/foo\.statsd\.gauges\.test1\.value 130\.0 \d+ "t3:10,t4:value2,extratag:1"\n/)
+            expect(output).to match(/foo\.statsd\.counters\.test1\.count 110 \d+ "t1:10,t2:value1,extratag:1"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.lower 140\.0 \d+ "t5:10,t6:value3,extratag:1"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.mean 140\.0 \d+ "t5:10,t6:value3,extratag:1"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper 140\.0 \d+ "t5:10,t6:value3,extratag:1"\n/)
+            expect(output).to match(/foo\.statsd\.timers\.test1\.time\.upper_90 140\.0 \d+ "t5:10,t6:value3,extratag:1"\n/)
             expect(output.split("\n").size).to eq(12)
             expect(status).to eq(0)
             async_done
@@ -162,7 +162,7 @@ describe 'Statsd extension with datadog protocol' do
         StatsD.increment('test1.count', 10, sample_rate: 0.9, tags: { t1: 1, t2: 2 })
         timer(2) do
           @extension.safe_run do |output, status|
-            expect(output).to match(/foo\.statsd\.counters\.test1\.count 11 \d+ t1:1,t2:2/)
+            expect(output).to match(/foo\.statsd\.counters\.test1\.count 11 \d+ "t1:1,t2:2"\n/)
             expect(status).to eq(0)
             async_done
           end

@@ -26,7 +26,7 @@ module Sensu
           port: 8125,
           flush_interval: 10,
           send_interval: 30,
-          percentile: 90,
+          percentiles: [90, 95, 99],
           delete_gauges: false,
           delete_counters: false,
           delete_timers: false,
@@ -133,21 +133,24 @@ module Sensu
           min = values.first || 0
           max = values.last || 0
           mean = min
-          max_at_threshold = min
-          percentile = options[:percentile]
+          percentiles = Hash.new { |h, k| h[k] = min }
           if length > 1
-            threshold_index = ((100 - percentile) / 100.0) * length
-            threshold_count = length - threshold_index.round
-            valid_values = values.slice(0, threshold_count)
-            max_at_threshold = valid_values[-1]
+            options[:percentiles].each do |percent|
+              threshold_index = ((100 - percent) / 100.0) * length
+              threshold_count = length - threshold_index.round
+              valid_values = values.slice(0, threshold_count)
+              percentiles[percent] = valid_values[-1]
+            end
             sum = 0
-            valid_values.each { |v| sum += v }
-            mean = sum / valid_values.length
+            values.each { |v| sum += v }
+            mean = sum / values.length
           end
           add_metric('timers', name, 'lower', min)
           add_metric('timers', name, 'mean', mean)
           add_metric('timers', name, 'upper', max)
-          add_metric('timers', name, "upper_#{percentile}", max_at_threshold)
+          options[:percentiles].each do |percent|
+            add_metric('timers', name, "upper_#{percent}", percentiles[percent])
+          end
         end
         clean(@timers, options[:delete_timers], options[:reset_timers])
         @logger.debug('flushed statsd metrics')

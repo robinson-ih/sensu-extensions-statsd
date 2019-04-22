@@ -209,7 +209,7 @@ describe 'Sensu::Extension::StatsD' do
         end
         timer(3) do
           @extension.safe_run do |output, status|
-            expect(output.split("\n").size).to eq(7)
+            expect(output.split("\n").size).to eq(9)
             expect(status).to eq(0)
             async_done
           end
@@ -260,6 +260,45 @@ describe 'Sensu::Extension::StatsD' do
           @extension.safe_run do |output, status|
             expect(output).to match(/foo\.statsd\.gauges\.sample 10\.0/)
             expect(output.split("\n").size).to eq(1)
+            expect(status).to eq(0)
+            async_done
+          end
+        end
+      end
+    end
+  end
+
+  it 'can support 90, 95 & 99 percentiles' do
+    @extension.settings = {
+      client: {
+        name: 'foo'
+      },
+      statsd: {
+        flush_interval: 1,
+        delete_gauges: true,
+        delete_counters: true,
+        delete_timers: true,
+        truncate_output: false
+      }
+    }
+    async_wrapper do
+      timer(1) do
+        (1..100).to_a.shuffle.each do |point|
+          EM.connect('127.0.0.1', 8125, nil) do |socket|
+            data = "udp:#{point}|ms"
+            socket.send_data(data)
+            socket.close_connection_after_writing
+          end
+        end
+        timer(3) do
+          @extension.safe_run do |output, status|
+            expect(output.split("\n").size).to eq(6)
+            expect(output).to match(/foo\.statsd\.timers\.udp.lower 1\.0/)
+            expect(output).to match(/foo\.statsd\.timers\.udp.upper 100\.0/)
+            expect(output).to match(/foo\.statsd\.timers\.udp.mean 50\.5/)
+            expect(output).to match(/foo\.statsd\.timers\.udp.upper_90 90\.0/)
+            expect(output).to match(/foo\.statsd\.timers\.udp.upper_95 95\.0/)
+            expect(output).to match(/foo\.statsd\.timers\.udp.upper_99 99\.0/)
             expect(status).to eq(0)
             async_done
           end

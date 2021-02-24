@@ -67,6 +67,7 @@ module Sensu
         setup_flush_timers
         setup_parser
         setup_statsd_socket
+        @logger = Sensu::Logger.get(log_level: :info)
       end
 
       def run
